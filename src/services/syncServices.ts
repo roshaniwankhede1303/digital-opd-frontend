@@ -1,139 +1,83 @@
-// src/services/syncService.ts
-import { databaseService } from "./database";
-import { socketService } from "./socketService";
-import { UserAction, ChatMessage, GameSession } from "../utils/types";
+// import { chatService } from "./chatService";
 
-class SyncService {
-  private syncInProgress = false;
-  private syncCallbacks: ((status: "syncing" | "synced" | "error") => void)[] =
-    [];
+// let syncInterval: ReturnType<typeof setInterval> | null = null;
+// let isSyncing = false;
 
-  async performSync(): Promise<boolean> {
-    if (this.syncInProgress) {
-      return false;
-    }
+// const syncQueuedActions = async (
+//   queuedActions: QueuedAction[],
+//   removeQueuedAction: (id: string) => Promise<void>,
+//   saveQueuedAction: (action: QueuedAction) => Promise<void>
+// ): Promise<void> => {
+//   for (const action of queuedActions) {
+//     try {
+//       await chatService.processQueuedAction(action);
+//       await removeQueuedAction(action.id);
+//     } catch (error) {
+//       console.error("Failed to sync queued action:", error);
+//       // Increment retry count
+//       const updatedAction = { ...action, retryCount: action.retryCount + 1 };
+//       if (updatedAction.retryCount < 3) {
+//         await saveQueuedAction(updatedAction);
+//       } else {
+//         // Remove after 3 failed attempts
+//         await removeQueuedAction(action.id);
+//       }
+//     }
+//   }
+// };
 
-    if (!socketService.isConnected()) {
-      console.log("Cannot sync: not connected to server");
-      return false;
-    }
+// const startAutoSync = (
+//   getQueuedActions: () => Promise<QueuedAction[]>,
+//   removeQueuedAction: (id: string) => Promise<void>,
+//   saveQueuedAction: (action: QueuedAction) => Promise<void>
+// ) => {
+//   if (syncInterval) return;
 
-    this.syncInProgress = true;
-    this.notifyCallbacks("syncing");
+//   syncInterval = setInterval(async () => {
+//     await syncIfOnline(getQueuedActions, removeQueuedAction, saveQueuedAction);
+//   }, 30000); // Sync every 30 seconds
+// };
 
-    try {
-      // Get all unsynced actions
-      const unsyncedActions = await databaseService.getUnsyncedActions();
+// const stopAutoSync = () => {
+//   if (syncInterval) {
+//     clearInterval(syncInterval);
+//     syncInterval = null;
+//   }
+// };
 
-      if (unsyncedActions.length === 0) {
-        this.syncInProgress = false;
-        this.notifyCallbacks("synced");
-        return true;
-      }
+// const syncIfOnline = async (
+//   getQueuedActions: () => Promise<QueuedAction[]>,
+//   removeQueuedAction: (id: string) => Promise<void>,
+//   saveQueuedAction: (action: QueuedAction) => Promise<void>
+// ) => {
+//   if (isSyncing) return;
 
-      console.log(`Syncing ${unsyncedActions.length} actions...`);
+//   try {
+//     isSyncing = true;
+//     const queuedActions = await getQueuedActions();
+//     await syncQueuedActions(
+//       queuedActions,
+//       removeQueuedAction,
+//       saveQueuedAction
+//     );
+//   } catch (error) {
+//     console.error("Sync failed:", error);
+//   } finally {
+//     isSyncing = false;
+//   }
+// };
 
-      // Group actions by patient for batch processing
-      const actionsByPatient = this.groupActionsByPatient(unsyncedActions);
+// const forceSync = async (
+//   getQueuedActions: () => Promise<QueuedAction[]>,
+//   removeQueuedAction: (id: string) => Promise<void>,
+//   saveQueuedAction: (action: QueuedAction) => Promise<void>
+// ) => {
+//   await syncIfOnline(getQueuedActions, removeQueuedAction, saveQueuedAction);
+// };
 
-      // Process each patient's actions
-      for (const [patientId, actions] of Object.entries(actionsByPatient)) {
-        await this.syncPatientActions(patientId, actions);
-      }
-
-      console.log("Sync completed successfully");
-      this.syncInProgress = false;
-      this.notifyCallbacks("synced");
-      return true;
-    } catch (error) {
-      console.error("Sync failed:", error);
-      this.syncInProgress = false;
-      this.notifyCallbacks("error");
-      return false;
-    }
-  }
-
-  private groupActionsByPatient(
-    actions: UserAction[]
-  ): Record<string, UserAction[]> {
-    return actions.reduce((groups, action) => {
-      if (!groups[action.patientId]) {
-        groups[action.patientId] = [];
-      }
-      groups[action.patientId].push(action);
-      return groups;
-    }, {} as Record<string, UserAction[]>);
-  }
-
-  private async syncPatientActions(
-    patientId: string,
-    actions: UserAction[]
-  ): Promise<void> {
-    // Sort actions by timestamp to maintain order
-    const sortedActions = actions.sort((a, b) => a.timestamp - b.timestamp);
-
-    for (const action of sortedActions) {
-      try {
-        // Send action to server via socket
-        if (action.type === "test_request") {
-          socketService.sendTestRequest(
-            patientId,
-            action.content,
-            action.attempt
-          );
-        } else if (action.type === "diagnosis_submission") {
-          socketService.sendDiagnosis(
-            patientId,
-            action.content,
-            action.attempt
-          );
-        }
-
-        // Mark as synced locally
-        await databaseService.markActionAsSynced(action.id);
-
-        // Small delay to avoid overwhelming the server
-        await this.delay(100);
-      } catch (error) {
-        console.error(`Failed to sync action ${action.id}:`, error);
-        throw error;
-      }
-    }
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  // Event subscription
-  onSyncStatusChange(
-    callback: (status: "syncing" | "synced" | "error") => void
-  ): () => void {
-    this.syncCallbacks.push(callback);
-    return () => {
-      this.syncCallbacks = this.syncCallbacks.filter((cb) => cb !== callback);
-    };
-  }
-
-  private notifyCallbacks(status: "syncing" | "synced" | "error") {
-    this.syncCallbacks.forEach((callback) => callback(status));
-  }
-
-  // Auto-sync when connection is restored
-  setupAutoSync() {
-    socketService.onConnectionChange((connected) => {
-      if (connected) {
-        // Wait a bit for connection to stabilize
-        setTimeout(() => {
-          this.performSync();
-        }, 1000);
-      }
-    });
-  }
-
-  isSyncing(): boolean {
-    return this.syncInProgress;
-  }
-}
-
-export const syncService = new SyncService();
+// export const syncService = {
+//   startAutoSync,
+//   stopAutoSync,
+//   syncIfOnline,
+//   forceSync,
+// };

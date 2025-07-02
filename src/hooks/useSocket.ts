@@ -1,25 +1,34 @@
-// src/hooks/useSocket.ts
-import { useState, useEffect } from "react";
-import { socketService } from "../services/socketService";
+import { useEffect, useState, useRef } from "react";
+import { io, Socket } from "socket.io-client";
 
-export const useSocket = (serverUrl: string) => {
+export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    socketService.connect(serverUrl);
+    const SOCKET_URL = "http://192.168.1.33:3000"; // UPDATE THIS
 
-    const unsubscribe = socketService.onConnectionChange(setIsConnected);
+    console.log("🔌 Connecting to:", SOCKET_URL);
+
+    socketRef.current = io(SOCKET_URL);
+
+    socketRef.current.on("connect", () => {
+      console.log("✅ Connected!");
+      setIsConnected(true);
+      socketRef.current?.emit("join");
+    });
+
+    socketRef.current.on("disconnect", () => {
+      console.log("❌ Disconnected");
+      setIsConnected(false);
+    });
 
     return () => {
-      unsubscribe();
-      socketService.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
-  }, [serverUrl]);
+  }, []);
 
-  return {
-    isConnected,
-    sendTestRequest: socketService.sendTestRequest.bind(socketService),
-    sendDiagnosis: socketService.sendDiagnosis.bind(socketService),
-    onMessage: socketService.onMessage.bind(socketService),
-  };
-};
+  return { socket: socketRef.current, isConnected };
+}

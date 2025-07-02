@@ -1,100 +1,95 @@
-// src/components/ScoreDisplay.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { GameSession } from '../utils/types';
+import { Ionicons } from '@expo/vector-icons';
+import { ScoreBreakdown } from '../utils/types';
+import { Colors } from '../constants/Colors';
 
-interface Props {
-    gameSession: GameSession;
+interface ScoreDisplayProps {
+    scoreBreakdown: ScoreBreakdown;
+    showBreakdown?: boolean;
 }
 
-export const ScoreDisplay: React.FC<Props> = ({ gameSession }) => {
+export function ScoreDisplay({ scoreBreakdown, showBreakdown = true }: ScoreDisplayProps) {
+    const getScoreColor = () => {
+        const percentage = (scoreBreakdown.totalScore / scoreBreakdown.maxTotalScore) * 100;
+        if (percentage >= 80) return Colors.success;
+        if (percentage >= 60) return Colors.warning;
+        return Colors.error;
+    };
+
     return (
         <View style={styles.container}>
-            <View style={styles.checkmark}>
-                <Text style={styles.checkmarkText}>✓</Text>
+            <View style={styles.totalScoreContainer}>
+                <Text style={styles.scoreLabel}>Total Score</Text>
+                <Text style={[styles.totalScore, { color: getScoreColor() }]}>
+                    {scoreBreakdown.totalScore}/{scoreBreakdown.maxTotalScore}
+                </Text>
             </View>
 
-            <Text style={styles.scoreTitle}>YOUR SCORE</Text>
-            <Text style={styles.scoreValue}>{gameSession.totalPoints}/10 Points</Text>
+            {showBreakdown && (
+                <View style={styles.breakdownContainer}>
+                    <View style={styles.scoreItem}>
+                        <Ionicons name="flask" size={16} color={Colors.primary} />
+                        <Text style={styles.scoreItemLabel}>Test</Text>
+                        <Text style={styles.scoreItemValue}>
+                            {scoreBreakdown.testScore}/{scoreBreakdown.maxTestScore}
+                        </Text>
+                    </View>
 
-            <View style={styles.breakdown}>
-                <View style={styles.breakdownItem}>
-                    <Text style={styles.icon}>🔬</Text>
-                    <Text style={styles.label}>LAB TEST</Text>
-                    <Text style={styles.points}>{gameSession.labTestPoints}/5 Points</Text>
+                    <View style={styles.scoreItem}>
+                        <Ionicons name="medical" size={16} color={Colors.primary} />
+                        <Text style={styles.scoreItemLabel}>Diagnosis</Text>
+                        <Text style={styles.scoreItemValue}>
+                            {scoreBreakdown.diagnosisScore}/{scoreBreakdown.maxDiagnosisScore}
+                        </Text>
+                    </View>
                 </View>
-
-                <View style={styles.breakdownItem}>
-                    <Text style={styles.icon}>👨‍⚕️</Text>
-                    <Text style={styles.label}>DIAGNOSIS</Text>
-                    <Text style={styles.points}>{gameSession.diagnosisPoints}/5 Points</Text>
-                </View>
-            </View>
+            )}
         </View>
     );
-};
+}
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: 'white',
-        padding: 32,
+        backgroundColor: Colors.surface,
+        borderRadius: 12,
+        padding: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    totalScoreContainer: {
         alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1
+        marginBottom: 16,
     },
-    checkmark: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#34C759',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 24
+    scoreLabel: {
+        fontSize: 14,
+        color: Colors.text.secondary,
+        marginBottom: 4,
     },
-    checkmarkText: {
-        color: 'white',
-        fontSize: 32,
-        fontWeight: 'bold'
-    },
-    scoreTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#8E8E93',
-        marginBottom: 8,
-        letterSpacing: 1
-    },
-    scoreValue: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: 'black',
-        marginBottom: 40
-    },
-    breakdown: {
-        width: '100%',
-        gap: 24
-    },
-    breakdownItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 20,
-        backgroundColor: '#F8F9FA',
-        borderRadius: 12
-    },
-    icon: {
+    totalScore: {
         fontSize: 24,
-        marginRight: 16
+        fontWeight: 'bold',
     },
-    label: {
+    breakdownContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
+    scoreItem: {
+        alignItems: 'center',
         flex: 1,
+    },
+    scoreItemLabel: {
+        fontSize: 12,
+        color: Colors.text.secondary,
+        marginTop: 4,
+        marginBottom: 2,
+    },
+    scoreItemValue: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#666',
-        letterSpacing: 0.5
+        color: Colors.text.primary,
     },
-    points: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: 'black'
-    }
 });

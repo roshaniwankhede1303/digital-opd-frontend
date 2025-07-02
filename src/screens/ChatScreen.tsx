@@ -1,0 +1,209 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    ScrollView,
+    StyleSheet,
+    SafeAreaView,
+} from 'react-native';
+import { useGame } from '../hooks/useGame';
+
+export function ChatScreen() {
+    const [inputText, setInputText] = useState('');
+
+    const {
+        messages,
+        sendMessage,
+        restartGame,
+        isLoading,
+        isConnected,
+        gameData,
+        isReady,
+    } = useGame();
+
+    const handleSend = async () => {
+        if (!inputText.trim() || !isReady) return;
+
+        const success = await sendMessage(inputText.trim());
+        if (success) {
+            setInputText('');
+        }
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <Text style={styles.title}>{gameData?.patient?.name || 'Loading...'}</Text>
+                <Text style={styles.points}>{gameData?.score || 0} points</Text>
+            </View>
+
+            {/* Status */}
+            <View style={styles.status}>
+                <Text>Socket: {isConnected ? '✅' : '❌'}</Text>
+                <Text>Ready: {isReady ? '✅' : '❌'}</Text>
+                <Text>Phase: {gameData?.phase || 'loading'}</Text>
+                <TouchableOpacity onPress={restartGame} style={styles.btn}>
+                    <Text>RESTART</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Messages */}
+            <ScrollView style={styles.messages}>
+                {/* Patient Info */}
+                <View style={styles.patientCard}>
+                    <Text style={styles.greeting}>Hi, Dr. Shreya. Good to see you.</Text>
+                    <Text style={styles.symptoms}>
+                        I've been having a persistent cough lately, and I've noticed I'm losing weight without trying. I'm a bit concerned because I've been a smoker for many years.
+                    </Text>
+                </View>
+
+
+
+                {/* Chat Messages */}
+                {messages.map((msg, index) => (
+                    <View key={index} style={msg.sender === 'user' ? styles.userMsg : styles.aiMsg}>
+                        {msg.sender === 'ai' && <Text style={styles.aiTitle}>SENIOR DOCTOR</Text>}
+                        <Text style={msg.sender === 'user' ? styles.userText : styles.aiText}>
+                            {msg.content}
+                        </Text>
+
+                    </View>
+                ))}
+
+                {isLoading && (
+                    <View style={styles.loading}>
+                        <Text>AI Doctor is thinking...</Text>
+                    </View>
+                )}
+            </ScrollView>
+
+            {/* Input */}
+            <View style={styles.inputContainer}>
+                <TextInput
+                    style={styles.textInput}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    placeholder="Enter your response"
+                    editable={isReady && !isLoading}
+                />
+                <TouchableOpacity
+                    onPress={handleSend}
+                    style={[styles.sendBtn, { opacity: isReady && inputText.trim() ? 1 : 0.5 }]}
+                    disabled={!isReady || !inputText.trim() || isLoading}
+                >
+                    <Text style={styles.sendText}>SEND</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#f5f5f5' },
+    header: {
+        backgroundColor: '#4A90E2',
+        padding: 16,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+    },
+    title: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+    points: { color: 'white', fontSize: 14 },
+    status: {
+        backgroundColor: '#e0e0e0',
+        padding: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center'
+    },
+    btn: {
+        backgroundColor: '#ff6b6b',
+        padding: 8,
+        borderRadius: 4
+    },
+    messages: { flex: 1, padding: 16 },
+    patientCard: {
+        backgroundColor: 'white',
+        padding: 16,
+        marginBottom: 16,
+        borderRadius: 8
+    },
+    greeting: { fontSize: 16, marginBottom: 12 },
+    symptoms: { fontSize: 16, lineHeight: 22 },
+    doctorCard: {
+        backgroundColor: 'white',
+        padding: 16,
+        marginBottom: 16,
+        borderRadius: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#4A90E2'
+    },
+    doctorTitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+        marginBottom: 8
+    },
+    doctorMessage: { fontSize: 16, lineHeight: 22 },
+    userMsg: {
+        backgroundColor: '#4A90E2',
+        padding: 12,
+        marginBottom: 8,
+        borderRadius: 8,
+        alignSelf: 'flex-end',
+        maxWidth: '80%'
+    },
+    aiMsg: {
+        backgroundColor: 'white',
+        padding: 12,
+        marginBottom: 8,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        maxWidth: '80%'
+    },
+    userText: { color: 'white', fontSize: 16 },
+    aiText: { fontSize: 16 },
+    aiTitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#4A90E2',
+        marginBottom: 4
+    },
+    testResult: {
+        backgroundColor: '#f0f0f0',
+        padding: 12,
+        marginTop: 8,
+        borderRadius: 6
+    },
+    testTitle: { fontWeight: 'bold', marginBottom: 4 },
+    testText: { fontSize: 14 },
+    loading: {
+        padding: 16,
+        alignItems: 'center'
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        padding: 16,
+        backgroundColor: 'white',
+        alignItems: 'center'
+    },
+    textInput: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginRight: 12
+    },
+    sendBtn: {
+        backgroundColor: '#4A90E2',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20
+    },
+    sendText: { color: 'white', fontWeight: 'bold' },
+});
