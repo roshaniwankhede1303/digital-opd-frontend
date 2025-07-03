@@ -6,13 +6,14 @@ export function useGame() {
   const [isLoading, setIsLoading] = useState(false);
   const [gameData, setGameData] = useState<any>(null);
   const [eventName, setEventName] = useState<string>();
+  const [testScore, setTestScore] = useState<number>(0);
+  const [diagnosisScore, setDiagnosisScore] = useState<number>(0);
 
   const [isReady, setIsReady] = useState(false);
   const { socket, isConnected } = useSocket();
-
   useEffect(() => {
-    console.log("🎮 rosh event name", eventName);
-  }, [eventName]);
+    console.log("🎮 scores new", testScore, diagnosisScore);
+  }, [testScore, diagnosisScore]);
 
   useEffect(() => {
     if (!socket) return;
@@ -26,7 +27,7 @@ export function useGame() {
 
     // Log all outgoing events too
     socket.onAnyOutgoing((eventName, ...args) => {
-      console.log(`📤 [SENT] ${eventName}:`, args);
+      // console.log(`📤 [SENT] ${eventName}:`, args);
     });
 
     socket.on("game_ready", (data) => {
@@ -34,23 +35,15 @@ export function useGame() {
     });
 
     socket.on("case_started", (data) => {
-      console.log("✅ case started:", data);
+      // console.log("✅ case started:", data);
       setGameData(data.gameData);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          content: data.message,
-          sender: "ai",
-          testResult: data.gameData,
-        },
-      ]);
-
       setIsReady(true);
+      setTestScore(0);
+      setDiagnosisScore(0);
     });
 
     socket.on("senior_doctor_message", (data) => {
-      console.log("🤖 AI response:", data);
+      // console.log("🤖 AI response:", data);
 
       setMessages((prev) => [
         ...prev,
@@ -65,8 +58,10 @@ export function useGame() {
       // setGameData(data);
 
       setEventName(data.next_event);
+      setTestScore(data.testScore ? data.testScore : 0);
+      setDiagnosisScore(data.diagnosisScore ? data.diagnosisScore : 0);
       setIsLoading(false);
-      console.log("🤖 event name:", data.next_event);
+      // console.log("🤖 event name:", data.next_event);
     });
 
     return () => {
@@ -83,7 +78,7 @@ export function useGame() {
         return false;
       }
 
-      console.log("📤 Sending:", eventNameUpdated, content);
+      // console.log("📤 Sending:", eventNameUpdated, content);
 
       setMessages((prev) => [
         ...prev,
@@ -105,8 +100,13 @@ export function useGame() {
     if (socket) {
       console.log("🔄 Restarting");
       setMessages([]);
-      setIsReady(false);
-      socket.emit("restart_game");
+      socket.on("case_started", (data) => {
+        // console.log("✅ case started:", data);
+        setGameData(data.gameData);
+        setIsReady(true);
+        setTestScore(0);
+        setDiagnosisScore(0);
+      });
     }
   }, [socket]);
 
@@ -118,5 +118,7 @@ export function useGame() {
     isConnected,
     gameData,
     isReady,
+    testScore,
+    diagnosisScore,
   };
 }

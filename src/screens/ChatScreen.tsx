@@ -21,6 +21,8 @@ export function ChatScreen() {
         isConnected,
         gameData,
         isReady,
+        testScore,
+        diagnosisScore,
     } = useGame();
 
     const handleSend = async () => {
@@ -65,11 +67,17 @@ export function ChatScreen() {
                 {/* Chat Messages */}
                 {messages.map((msg, index) => (
                     <View key={index} style={msg.sender === 'user' ? styles.userMsg : styles.aiMsg}>
-                        {msg.sender === 'ai' && <Text style={styles.aiTitle}>SENIOR DOCTOR</Text>}
+                        {msg.sender === 'ai' && (
+                            <View style={styles.aiHeader}>
+                                <Text style={styles.aiTitle}>SENIOR DOCTOR</Text>
+                                <Text style={styles.scoreText}>
+                                    ({testScore} points)({diagnosisScore} points)
+                                </Text>
+                            </View>
+                        )}
                         <Text style={msg.sender === 'user' ? styles.userText : styles.aiText}>
                             {msg.content}
                         </Text>
-
                     </View>
                 ))}
 
@@ -206,4 +214,15 @@ const styles = StyleSheet.create({
         borderRadius: 20
     },
     sendText: { color: 'white', fontWeight: 'bold' },
+    aiHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 5, // Add some spacing between header and message
+    },
+    scoreText: {
+        fontSize: 12,
+        color: '#666',
+        // Add any other styling for the score
+    },
 });

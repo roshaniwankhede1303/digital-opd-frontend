@@ -48,7 +48,7 @@ export function useChatMessages() {
 
     // Log ALL events for debugging
     socket.onAny((eventName, ...args) => {
-      console.log(`📡 EVENT: ${eventName}`, args);
+      // console.log(`📡 EVENT: ${eventName}`, args);
     });
 
     return () => {
