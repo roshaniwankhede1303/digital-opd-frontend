@@ -26,7 +26,7 @@ export function useGame() {
       return;
     }
 
-    const SOCKET_URL = "http://192.168.1.33:3000";
+    const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_BASE_URL;
     console.log("🔌 Creating global socket connection to:", SOCKET_URL);
 
     globalSocket = io(SOCKET_URL, {

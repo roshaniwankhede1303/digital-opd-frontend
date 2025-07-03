@@ -1,24 +1,18 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
     View,
     Text,
-    TouchableOpacity,
     StyleSheet,
     SafeAreaView,
     StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useGame } from '../hooks/useGame';
 import { Colors } from '../constants/Colors';
 
 export function ScoreScreen() {
-    const router = useRouter();
     const { testScore, diagnosisScore } = useGame();
     const maxScore = 10;
-    useEffect(() => {
-        console.log("Test scoghgvbhj", testScore, diagnosisScore);
-    }, [testScore, diagnosisScore]);
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -97,7 +91,6 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.background,
         alignItems: 'center',
         justifyContent: 'center',
-        // paddingHorizontal: 32,
     },
     checkmarkContainer: {
         marginBottom: 24,
