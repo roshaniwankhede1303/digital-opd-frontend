@@ -1,109 +1,117 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 
-interface NetworkBannerProps {
-    isOnline: boolean;
-}
-
-export function NetworkBanner({ isOnline }: NetworkBannerProps) {
-    const [previousOnlineState, setPreviousOnlineState] = useState(isOnline);
+export const NetworkBanner = ({ isConnected, syncStatus, connectionType, onRetrySync }) => {
+    const [slideAnim] = useState(new Animated.Value(-50));
     const [showBanner, setShowBanner] = useState(false);
-    const [bannerType, setBannerType] = useState<'offline' | 'syncing' | 'synced'>('offline');
-    const fadeAnim = useState(new Animated.Value(0))[0];
 
     useEffect(() => {
-        if (previousOnlineState !== isOnline) {
-            if (!isOnline) {
-                // Going offline
-                setBannerType('offline');
-                setShowBanner(true);
-            } else {
-                // Coming online
-                setBannerType('syncing');
-                setShowBanner(true);
+        const shouldShow = !isConnected || ['syncing', 'synced', 'sync_failed'].includes(syncStatus);
 
-                // Simulate sync process
-                setTimeout(() => {
-                    setBannerType('synced');
-                    setTimeout(() => {
-                        setShowBanner(false);
-                    }, 2000);
-                }, 1500);
-            }
-            setPreviousOnlineState(isOnline);
-        }
-    }, [isOnline, previousOnlineState]);
+        if (shouldShow !== showBanner) {
+            setShowBanner(shouldShow);
 
-    useEffect(() => {
-        if (showBanner) {
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        } else {
-            Animated.timing(fadeAnim, {
-                toValue: 0,
+            Animated.timing(slideAnim, {
+                toValue: shouldShow ? 0 : -50,
                 duration: 300,
                 useNativeDriver: true,
             }).start();
         }
-    }, [showBanner, fadeAnim]);
+    }, [isConnected, syncStatus, showBanner]);
 
     const getBannerConfig = () => {
-        switch (bannerType) {
-            case 'offline':
-                return {
-                    text: 'Offline - Changes will sync when online',
-                    icon: 'cloud-offline-outline',
-                    color: Colors.error,
-                };
+        if (!isConnected) {
+            return {
+                text: `📱 Offline Mode${connectionType ? ` (${connectionType})` : ''} - Data will sync when connected`,
+                backgroundColor: '#ff9500',
+                textColor: 'white',
+                showRetry: false
+            };
+        }
+
+        switch (syncStatus) {
             case 'syncing':
                 return {
-                    text: 'Syncing...',
-                    icon: 'sync-outline',
-                    color: Colors.warning,
+                    text: '🔄 Syncing data...',
+                    backgroundColor: '#007AFF',
+                    textColor: 'white',
+                    showRetry: false
                 };
             case 'synced':
                 return {
-                    text: 'Synced',
-                    icon: 'checkmark-circle-outline',
-                    color: Colors.success,
+                    text: '✅ Data synced successfully',
+                    backgroundColor: '#34C759',
+                    textColor: 'white',
+                    showRetry: false
                 };
+            case 'sync_failed':
+                return {
+                    text: '❌ Sync failed - Tap to retry',
+                    backgroundColor: '#FF3B30',
+                    textColor: 'white',
+                    showRetry: true
+                };
+            default:
+                return null;
         }
     };
 
-    if (!showBanner) return null;
-
     const config = getBannerConfig();
+
+    if (!config || !showBanner) return null;
 
     return (
         <Animated.View
             style={[
-                styles.container,
-                { backgroundColor: config.color, opacity: fadeAnim }
+                styles.banner,
+                {
+                    backgroundColor: config.backgroundColor,
+                    transform: [{ translateY: slideAnim }]
+                }
             ]}
         >
-            <Ionicons name={config.icon as any} size={16} color="white" />
-            <Text style={styles.text}>{config.text}</Text>
+            <TouchableOpacity
+                style={styles.bannerContent}
+                onPress={config.showRetry ? onRetrySync : undefined}
+                disabled={!config.showRetry}
+            >
+                <Text style={[styles.bannerText, { color: config.textColor }]}>
+                    {config.text}
+                </Text>
+                {config.showRetry && (
+                    <Text style={[styles.retryText, { color: config.textColor }]}>
+                        TAP TO RETRY
+                    </Text>
+                )}
+            </TouchableOpacity>
         </Animated.View>
     );
-}
+};
 
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
+    banner: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        zIndex: 1000,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    bannerContent: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
     },
-    text: {
-        color: 'white',
+    bannerText: {
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    retryText: {
         fontSize: 12,
-        fontWeight: '500',
-        marginLeft: 6,
+        fontWeight: '400',
+        marginTop: 2,
+        opacity: 0.8,
     },
 });

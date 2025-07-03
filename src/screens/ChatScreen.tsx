@@ -14,6 +14,7 @@ import {
 import { useGame } from "../hooks/useGame";
 import { Colors } from "../constants/Colors";
 import { ScoreScreen } from "./ScoreScreen";
+import { NetworkBanner } from "../components";
 
 export function ChatScreen() {
     const [inputText, setInputText] = useState<string>("");
@@ -22,13 +23,18 @@ export function ChatScreen() {
         messages,
         sendMessage,
         isLoading,
+        isConnected,
         isReady,
         testScore,
         diagnosisScore,
+        eventName,
         handleNextPatient,
         patientInfo,
         isLoadingNextPatient,
         showScore,
+        isInitialLoading,
+        isNetworkConnected,
+        syncStatus,
         patientQuery,
     } = useGame();
 
@@ -41,11 +47,24 @@ export function ChatScreen() {
         }
     };
 
-    // Show loading screen when loading next patient
-    if (isLoadingNextPatient) {
+    // Show initial loading screen
+    if (isInitialLoading) {
         return (
             <SafeAreaView style={styles.container}>
                 <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
+                <View style={styles.loadingContainer}>
+                    <Text style={styles.loadingText}>Loading...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    // Show loading screen when loading next patient (only when online)
+    if (isLoadingNextPatient && isNetworkConnected) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
+                <NetworkBanner isConnected={isNetworkConnected} syncStatus={syncStatus} />
                 <View style={styles.loadingContainer}>
                     <Text style={styles.loadingText}>Loading next patient...</Text>
                 </View>
@@ -56,6 +75,9 @@ export function ChatScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
+
+            {/* Network Status Banner */}
+            <NetworkBanner isConnected={isNetworkConnected} syncStatus={syncStatus} />
 
             {/* Header */}
             <View style={styles.header}>
@@ -92,7 +114,7 @@ export function ChatScreen() {
                         {/* Patient Info */}
                         <View style={styles.patientCard}>
                             <Text style={styles.symptoms}>
-                                {patientQuery}
+                                {patientQuery || "Patient information will load when connected..."}
                             </Text>
                         </View>
 
@@ -117,6 +139,9 @@ export function ChatScreen() {
                                 ) : (
                                     <View style={styles.userHeader}>
                                         <Text style={styles.userTitle}>YOU</Text>
+                                        {!isNetworkConnected && (
+                                            <Text style={styles.offlineIndicator}>📱</Text>
+                                        )}
                                     </View>
                                 )}
                                 <Text
@@ -124,27 +149,29 @@ export function ChatScreen() {
                                         msg.sender === "user" ? styles.userText : styles.aiText
                                     }
                                 >
-                                    {msg.content ? msg.content : "Loading..."}
+                                    {msg.content}
                                 </Text>
                             </View>
                         ))}
 
                         {isLoading && (
                             <View style={styles.loading}>
-                                <Text>AI Doctor is thinking...</Text>
+                                <Text>
+                                    {isNetworkConnected ? "AI Doctor is thinking..." : "Message saved - will send when online"}
+                                </Text>
                             </View>
                         )}
                     </ScrollView>
 
-                    {/* Input Container - Fixed position */}
+                    {/* Input Container */}
                     <View style={styles.inputWrapper}>
                         <View style={styles.inputContainer}>
                             <TextInput
                                 style={styles.textInput}
                                 value={inputText}
                                 onChangeText={setInputText}
-                                placeholder="Enter your response"
-                                editable={isReady && !isLoading}
+                                placeholder={isNetworkConnected ? "Enter your response" : "Type message (will sync when online)"}
+                                editable={isReady}
                                 multiline={false}
                                 returnKeyType="send"
                                 onSubmitEditing={handleSend}
@@ -153,11 +180,16 @@ export function ChatScreen() {
                                 onPress={handleSend}
                                 style={[
                                     styles.sendBtn,
-                                    { opacity: isReady && inputText.trim() ? 1 : 0.5 },
+                                    {
+                                        opacity: isReady && inputText.trim() ? 1 : 0.5,
+                                        backgroundColor: isNetworkConnected ? "#4A90E2" : "#ff9500"
+                                    },
                                 ]}
-                                disabled={!isReady || !inputText.trim() || isLoading}
+                                disabled={!isReady || !inputText.trim()}
                             >
-                                <Text style={styles.sendText}>SEND</Text>
+                                <Text style={styles.sendText}>
+                                    {isNetworkConnected ? "SEND" : "SAVE"}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -363,5 +395,9 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: '#666',
         marginBottom: 20,
+    },
+    offlineIndicator: {
+        fontSize: 12,
+        marginLeft: 4,
     },
 });
