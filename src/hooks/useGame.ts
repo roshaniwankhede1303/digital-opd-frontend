@@ -12,12 +12,12 @@ export function useGame() {
   const [diagnosisScore, setDiagnosisScore] = useState<number>(0);
   const [isReady, setIsReady] = useState(false);
   const [patientInfo, setPatientInfo] = useState<any>(null);
-  const [isLoadingNextPatient, setIsLoadingNextPatient] = useState(true);
+  const [isLoadingNextPatient, setIsLoadingNextPatient] = useState(false); // ✅ Start as false
   const [hasJoined, setHasJoined] = useState(false);
   const [showScore, setShowScore] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState(false);
-
-  console.log("isLoadingNextPatient", isLoadingNextPatient);
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // ✅ Add separate initial loading state
+  const [patientQuery, setPatientQuery] = useState<string>("");
 
   // Initialize global socket only once
   useEffect(() => {
@@ -51,7 +51,6 @@ export function useGame() {
     });
 
     return () => {
-      // Don't disconnect on component unmount
       console.log("🔄 Component cleanup - keeping socket alive");
     };
   }, []);
@@ -78,17 +77,20 @@ export function useGame() {
 
     const handleCaseStarted = (data: any) => {
       console.log("✅ case started:", data);
+
       setMessages([]);
       setPatientInfo({
         patientName: data?.patient_info,
         patientQuery: data?.patient_query,
       });
       setIsReady(true);
-      setTestScore(0);
-      setDiagnosisScore(0);
       setEventName("submit-test");
       setShowScore(false);
+      setPatientQuery(data?.patient_query);
+
+      // ✅ Turn off both loading states
       setIsLoadingNextPatient(false);
+      setIsInitialLoading(false);
     };
 
     const handleSeniorDoctorMessage = (data: any) => {
@@ -150,13 +152,12 @@ export function useGame() {
     [isReady, eventName]
   );
 
-  // Ultra-simple next patient handler
   const handleNextPatient = useCallback(() => {
     console.log("🔄 Next patient clicked");
 
-    // Use the simplest possible approach
     if (globalSocket && globalSocket.connected) {
       console.log("🚀 Emitting next-patient");
+      setIsLoadingNextPatient(true); // ✅ Only set this when clicking next patient
       globalSocket.emit("next-patient");
     } else {
       console.error("❌ Global socket not connected");
@@ -176,5 +177,7 @@ export function useGame() {
     patientInfo,
     isLoadingNextPatient,
     showScore,
+    isInitialLoading, // ✅ Return initial loading state
+    patientQuery,
   };
 }

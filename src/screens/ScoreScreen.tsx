@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     View,
     Text,
@@ -16,7 +16,9 @@ export function ScoreScreen() {
     const router = useRouter();
     const { testScore, diagnosisScore } = useGame();
     const maxScore = 10;
-
+    useEffect(() => {
+        console.log("Test scoghgvbhj", testScore, diagnosisScore);
+    }, [testScore, diagnosisScore]);
 
     return (
         <SafeAreaView style={styles.safeArea}>
