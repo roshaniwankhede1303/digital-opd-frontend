@@ -14,32 +14,13 @@ import { Colors } from '../constants/Colors';
 
 export function ScoreScreen() {
     const router = useRouter();
-    const { gameState, getCurrentPatient, nextPatient } = useGame();
-
-    const currentPatient = getCurrentPatient();
-    const totalScore = gameState.testScore + gameState.diagnosisScore;
+    const { testScore, diagnosisScore } = useGame();
     const maxScore = 10;
 
-    const handleNextPatient = () => {
-        nextPatient();
-        router.replace('/chat');
-    };
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
-
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.patientInfo}>
-                    <View style={styles.avatar}>
-                        <Ionicons name="person" size={24} color="white" />
-                    </View>
-                    <Text style={styles.patientName}>{currentPatient.name}</Text>
-                </View>
-
-                <Text style={styles.pointsText}>{gameState.score} points</Text>
-            </View>
 
             {/* Score Content */}
             <View style={styles.scoreContainer}>
@@ -48,7 +29,7 @@ export function ScoreScreen() {
                 </View>
 
                 <Text style={styles.scoreTitle}>YOUR SCORE</Text>
-                <Text style={styles.mainScore}>{totalScore}/{maxScore} Points</Text>
+                <Text style={styles.mainScore}>{testScore + diagnosisScore}/{maxScore} Points</Text>
 
                 {/* Score Breakdown */}
                 <View style={styles.breakdownContainer}>
@@ -57,7 +38,7 @@ export function ScoreScreen() {
                             <Ionicons name="flask" size={24} color={Colors.primary} />
                         </View>
                         <Text style={styles.scoreCategory}>LAB TEST</Text>
-                        <Text style={styles.scoreValue}>{gameState.testScore}/5 Points</Text>
+                        <Text style={styles.scoreValue}>{testScore}/5 Points</Text>
                     </View>
 
                     <View style={styles.scoreItem}>
@@ -65,16 +46,9 @@ export function ScoreScreen() {
                             <Ionicons name="medical" size={24} color={Colors.primary} />
                         </View>
                         <Text style={styles.scoreCategory}>DIAGNOSIS</Text>
-                        <Text style={styles.scoreValue}>{gameState.diagnosisScore}/5 Points</Text>
+                        <Text style={styles.scoreValue}>{diagnosisScore}/5 Points</Text>
                     </View>
                 </View>
-            </View>
-
-            {/* Next Patient Button */}
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.nextButton} onPress={handleNextPatient}>
-                    <Text style={styles.nextButtonText}>NEXT PATIENT</Text>
-                </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
@@ -121,7 +95,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.background,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 32,
+        // paddingHorizontal: 32,
     },
     checkmarkContainer: {
         marginBottom: 24,
@@ -165,21 +139,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
         color: Colors.text.primary,
-    },
-    buttonContainer: {
-        backgroundColor: Colors.background,
-        paddingHorizontal: 16,
-        paddingVertical: 24,
-    },
-    nextButton: {
-        backgroundColor: Colors.primary,
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    nextButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
     },
 });
