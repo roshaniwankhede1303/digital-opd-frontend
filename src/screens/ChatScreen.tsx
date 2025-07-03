@@ -25,7 +25,9 @@ export function ChatScreen() {
         diagnosisScore,
         eventName,
         handleNextPatient,
-        patientInfo
+        patientInfo,
+        isLoadingNextPatient,
+        showScore
     } = useGame();
 
     const handleSend = async () => {
@@ -36,6 +38,17 @@ export function ChatScreen() {
             setInputText("");
         }
     };
+    // Show loading screen when loading next patient
+    if (isLoadingNextPatient) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <Text style={styles.loadingText}>Loading next patient...</Text>
+                    {/* You can add a spinner here */}
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -48,7 +61,7 @@ export function ChatScreen() {
             </View>
 
             {/* Status */}
-            {eventName === "next-patient" ? (
+            {showScore ? (
                 <View style={styles.nextPatientContainer}>
                     <ScoreScreen />
                     <TouchableOpacity
@@ -255,5 +268,21 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 16,
         fontWeight: "600",
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+    },
+    loadingText: {
+        fontSize: 18,
+        color: '#666',
+        marginBottom: 20,
+    },
+    newPatientText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });

@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { useSocket } from "./useSocket";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+
+// Global socket instance outside of React
+let globalSocket: Socket | null = null;
 
 export function useGame() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -8,41 +11,87 @@ export function useGame() {
   const [testScore, setTestScore] = useState<number>(0);
   const [diagnosisScore, setDiagnosisScore] = useState<number>(0);
   const [isReady, setIsReady] = useState(false);
-  const { socket, isConnected } = useSocket();
   const [patientInfo, setPatientInfo] = useState<any>(null);
+  const [isLoadingNextPatient, setIsLoadingNextPatient] = useState(true);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [showScore, setShowScore] = useState<boolean>(false);
+  const [isConnected, setIsConnected] = useState(false);
 
+  console.log("isLoadingNextPatient", isLoadingNextPatient);
+
+  // Initialize global socket only once
   useEffect(() => {
-    if (!socket) return;
+    if (globalSocket) {
+      setIsConnected(globalSocket.connected);
+      return;
+    }
+
+    const SOCKET_URL = "http://192.168.1.33:3000";
+    console.log("🔌 Creating global socket connection to:", SOCKET_URL);
+
+    globalSocket = io(SOCKET_URL, {
+      transports: ["websocket"],
+      upgrade: false,
+      rememberUpgrade: false,
+      autoConnect: true,
+    });
+
+    globalSocket.on("connect", () => {
+      console.log("✅ Global socket connected!");
+      setIsConnected(true);
+    });
+
+    globalSocket.on("disconnect", (reason) => {
+      console.log("❌ Global socket disconnected:", reason);
+      setIsConnected(false);
+    });
+
+    globalSocket.on("error", (error) => {
+      console.error("🚨 Global socket error:", error);
+    });
+
+    return () => {
+      // Don't disconnect on component unmount
+      console.log("🔄 Component cleanup - keeping socket alive");
+    };
+  }, []);
+
+  // Handle initial game join
+  useEffect(() => {
+    if (globalSocket && isConnected && !hasJoined) {
+      console.log("🎮 Initial game join");
+      globalSocket.emit("join");
+      setHasJoined(true);
+    }
+  }, [isConnected, hasJoined]);
+
+  // Set up game listeners
+  useEffect(() => {
+    if (!globalSocket) return;
 
     console.log("🎮 Setting up game listeners");
 
-    // 🔥 LOG ALL INCOMING EVENTS
-    socket.onAny((eventName, ...args) => {
-      // console.log(`📡 [EVENT] ${eventName}:`, args);
-    });
-
-    // Log all outgoing events too
-    socket.onAnyOutgoing((eventName, ...args) => {
-      // console.log(`📤 [SENT] ${eventName}:`, args);
-    });
-
-    socket.on("game_ready", (data) => {
+    const handleGameReady = (data: any) => {
+      console.log("Game ready");
       setIsReady(true);
-    });
+    };
 
-    socket.on("case_started", (data) => {
+    const handleCaseStarted = (data: any) => {
       console.log("✅ case started:", data);
+      setMessages([]);
       setPatientInfo({
-        ...patientInfo,
         patientName: data?.patient_info,
         patientQuery: data?.patient_query,
       });
       setIsReady(true);
       setTestScore(0);
       setDiagnosisScore(0);
-    });
+      setEventName("submit-test");
+      setShowScore(false);
+      setIsLoadingNextPatient(false);
+    };
 
-    socket.on("senior_doctor_message", (data) => {
+    const handleSeniorDoctorMessage = (data: any) => {
       setMessages((prev) => [
         ...prev,
         {
@@ -53,32 +102,34 @@ export function useGame() {
         },
       ]);
 
-      // Update scores immediately
-
       setTestScore(data.test_score ? data?.test_score : 0);
       setDiagnosisScore(data.diagnosis_score ? data.diagnosis_score : 0);
 
-      // Set eventName immediately for other events, with delay for "next-patient"
       if (data.next_event === "next-patient") {
         setTimeout(() => {
-          setEventName(data.next_event);
-        }, 5000); // 2 seconds delay
+          setShowScore(true);
+        }, 2000);
       } else {
-        setEventName(data.next_event); // Immediate for other events
+        setEventName(data.next_event);
       }
 
       setIsLoading(false);
-    });
+    };
+
+    globalSocket.on("game_ready", handleGameReady);
+    globalSocket.on("case_started", handleCaseStarted);
+    globalSocket.on("senior_doctor_message", handleSeniorDoctorMessage);
 
     return () => {
-      // socket.off("game_ready");
-      // socket.off("ai_response");
+      globalSocket?.off("game_ready", handleGameReady);
+      globalSocket?.off("case_started", handleCaseStarted);
+      globalSocket?.off("senior_doctor_message", handleSeniorDoctorMessage);
     };
-  }, [socket]);
+  }, []);
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!socket || !isReady) {
+      if (!globalSocket || !isReady) {
         console.error("❌ Not ready to send");
         return false;
       }
@@ -93,38 +144,28 @@ export function useGame() {
       ]);
 
       setIsLoading(true);
-      socket.emit(eventName, content);
+      globalSocket.emit(eventName, content);
       return true;
     },
-    [socket, isReady, eventName, testScore, diagnosisScore]
+    [isReady, eventName]
   );
 
-  const restartGame = useCallback(() => {
-    if (socket) {
-      console.log("🔄 Restarting");
-      setMessages([]);
-      socket.on("case_started", (data) => {
-        // console.log("✅ case started:", data);
-        setIsReady(true);
-        setTestScore(0);
-        setDiagnosisScore(0);
-      });
-    }
-  }, [socket]);
-
+  // Ultra-simple next patient handler
   const handleNextPatient = useCallback(() => {
-    setEventName("submit-test");
-    console.log("🔄 Next patient");
-    setIsReady(true);
-    setTestScore(0);
-    setDiagnosisScore(0);
-    setMessages([]);
-  }, []); // You're not even using socket here!
+    console.log("🔄 Next patient clicked");
+
+    // Use the simplest possible approach
+    if (globalSocket && globalSocket.connected) {
+      console.log("🚀 Emitting next-patient");
+      globalSocket.emit("next-patient");
+    } else {
+      console.error("❌ Global socket not connected");
+    }
+  }, []);
 
   return {
     messages,
     sendMessage,
-    restartGame,
     isLoading,
     isConnected,
     isReady,
@@ -133,5 +174,7 @@ export function useGame() {
     eventName,
     handleNextPatient,
     patientInfo,
+    isLoadingNextPatient,
+    showScore,
   };
 }

@@ -6,20 +6,24 @@ export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const SOCKET_URL = "http://192.168.1.33:3000"; // UPDATE THIS
+    const SOCKET_URL = "http://192.168.1.33:3000";
 
     console.log("🔌 Connecting to:", SOCKET_URL);
 
-    socketRef.current = io(SOCKET_URL);
+    socketRef.current = io(SOCKET_URL, {
+      transports: ["websocket"],
+      upgrade: false,
+      rememberUpgrade: false,
+    });
 
     socketRef.current.on("connect", () => {
       console.log("✅ Connected!");
       setIsConnected(true);
-      socketRef.current?.emit("join");
+      // Remove automatic join - let the game hook handle it
     });
 
-    socketRef.current.on("disconnect", () => {
-      console.log("❌ Disconnected");
+    socketRef.current.on("disconnect", (reason) => {
+      console.log("❌ Disconnected:", reason);
       setIsConnected(false);
     });
 
@@ -30,5 +34,17 @@ export function useSocket() {
     };
   }, []);
 
-  return { socket: socketRef.current, isConnected };
+  // Add a manual join function
+  const joinGame = () => {
+    if (socketRef.current && isConnected) {
+      console.log("🎮 Joining game");
+      socketRef.current.emit("join");
+    }
+  };
+
+  return {
+    socket: socketRef.current,
+    isConnected,
+    joinGame,
+  };
 }
