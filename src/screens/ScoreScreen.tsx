@@ -7,11 +7,9 @@ import {
     StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useGame } from '../hooks/useGame';
 import { Colors } from '../constants/Colors';
 
-export function ScoreScreen() {
-    const { testScore, diagnosisScore } = useGame();
+export function ScoreScreen({ testScore, diagnosisScore }: { testScore: number, diagnosisScore: number }) {
     const maxScore = 10;
 
     return (

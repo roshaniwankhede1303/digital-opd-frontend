@@ -78,7 +78,7 @@ export const saveMessage = async (
     console.log("✅ Message saved offline:", result.lastInsertRowId);
     return result.lastInsertRowId;
   } catch (error) {
-    console.error("❌ Error saving message:", error);
+    // console.error("❌ Error saving message:", error);
     return null;
   }
 };
@@ -103,7 +103,7 @@ export const getMessages = async (
       synced: row.synced === 1,
     }));
   } catch (error) {
-    console.error("❌ Error getting messages:", error);
+    // console.error("❌ Error getting messages:", error);
     return [];
   }
 };
@@ -142,7 +142,7 @@ export const saveGameSession = async (
     console.log("✅ Game session saved offline:", result.lastInsertRowId);
     return result.lastInsertRowId;
   } catch (error) {
-    console.error("❌ Error saving game session:", error);
+    // console.error("❌ Error saving game session:", error);
     return null;
   }
 };
@@ -194,7 +194,7 @@ export const getLatestGameSession = async (): Promise<GameSession | null> => {
       completed_at: row.completed_at,
     };
   } catch (error) {
-    console.error("❌ Error getting latest session:", error);
+    // console.error("❌ Error getting latest session:", error);
     return null;
   }
 };
@@ -235,7 +235,7 @@ export const getOfflineQueue = async (): Promise<OfflineQueueItem[]> => {
       synced: row.synced === 1,
     }));
   } catch (error) {
-    console.error("❌ Error getting offline queue:", error);
+    // console.error("❌ Error getting offline queue:", error);
     return [];
   }
 };
